@@ -1,0 +1,4 @@
+#+title: Readme
+#+author: Andreu Cotanda Oliver
+
+An 8-chip emulator built with ~C~ and =raylib=.
