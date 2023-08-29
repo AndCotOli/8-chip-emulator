@@ -1,13 +1,19 @@
 #include "raylib.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #define SCREEN_WIDTH (800)
 #define SCREEN_HEIGHT (450)
 
 #define WINDOW_TITLE "8-chip emulator"
 
-int main() {
-  printf("8-chip emulator");
+int main(int argc, char *argv[]) {
+  printf("8-chip emulator\n");
+
+  if (argv[1] == NULL) {
+    printf("Usage: ./8_chip_emulator <path-to-rom>\n");
+    exit(EXIT_FAILURE);
+  }
 
   InitWindow(SCREEN_WIDTH, SCREEN_WIDTH, WINDOW_TITLE);
   SetTargetFPS(60);
