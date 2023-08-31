@@ -1,5 +1,7 @@
 #include "chip.h"
 
+#define ERROR_OPCODE printf("ERROR: unrecognized opcode 0x%X\n", opcode)
+
 /*
 ** Starts the system by setting all the appropiate variables.
 */
@@ -83,11 +85,17 @@ void load_roam(Chip8 *chip, const char *path) {
 }
 
 uint16_t get_opcode(Chip8 *chip) {
-  return chip->ram[chip->pc_register] << 8 | chip->ram[chip->pc_register + 1];
+  if (chip->pc_register < RAM_CAPACITY)
+    return chip->ram[chip->pc_register] << 8 | chip->ram[chip->pc_register + 1];
+  else {
+    printf("Error: Out of bounds.\n");
+    exit(EXIT_FAILURE);
+  }
 }
 
 void execute_instruction(Chip8 *chip) {
   uint16_t opcode = get_opcode(chip);
+  chip->current_op = opcode;
 
   switch (opcode & 0xF000) {
   case 0x0000:
@@ -99,7 +107,7 @@ void execute_instruction(Chip8 *chip) {
       return_from_subroutine(chip);
       break;
     default:
-      printf("Error");
+      ERROR_OPCODE;
       exit(EXIT_FAILURE);
     }
     break;
@@ -121,7 +129,7 @@ void execute_instruction(Chip8 *chip) {
   case 0x6000:
     set_Vx_to(chip);
     break;
-  case 0x700:
+  case 0x7000:
     add_to_Vx(chip);
     break;
   case 0x8000:
@@ -154,7 +162,7 @@ void execute_instruction(Chip8 *chip) {
       perform_left_shift(chip);
       break;
     default:
-      printf("Error");
+      ERROR_OPCODE;
       exit(EXIT_FAILURE);
     }
   case 0x9000:
@@ -181,7 +189,7 @@ void execute_instruction(Chip8 *chip) {
       skip_if_not_pressed(chip);
       break;
     default:
-      printf("Error");
+      ERROR_OPCODE;
       exit(EXIT_FAILURE);
     }
   case 0xF000:
@@ -214,11 +222,11 @@ void execute_instruction(Chip8 *chip) {
       read_registers_from_I(chip);
       break;
     default:
-      printf("Error");
+      ERROR_OPCODE;
       exit(EXIT_FAILURE);
     }
   default:
-    printf("Error");
+    ERROR_OPCODE;
     exit(EXIT_FAILURE);
   }
 }
