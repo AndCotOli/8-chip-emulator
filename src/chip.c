@@ -1,7 +1,16 @@
 #include "chip.h"
+#include "chip_8_struct.h"
+#include "instructions.h"
+#include <stdint.h>
 
 #define ERROR_OPCODE                                                           \
   fprintf(stderr, "ERROR: unrecognized opcode 0x%X\n", opcode)
+
+void (*instruction_table[16])(Chip8 *);
+void (*zero_table[2])(Chip8 *);
+void (*arithmetic_table[16])(Chip8 *);
+void (*skip_table[2])(Chip8 *);
+void (*register_table[9])(Chip8 *);
 
 /*
 ** Starts the system by setting all the appropiate variables.
@@ -86,7 +95,7 @@ void load_roam(Chip8 *chip, const char *path) {
 }
 
 uint16_t get_opcode(Chip8 *chip) {
-  if (chip->pc_register < RAM_CAPACITY)
+  if (chip->pc_register + 1 < RAM_CAPACITY)
     return chip->ram[chip->pc_register] << 8 | chip->ram[chip->pc_register + 1];
   else {
     fprintf(stderr, "ERROR: Out of bounds.\n");
@@ -97,140 +106,59 @@ uint16_t get_opcode(Chip8 *chip) {
 void execute_instruction(Chip8 *chip) {
   uint16_t opcode = get_opcode(chip);
   chip->current_op = opcode;
-
-  switch (opcode & 0xF000) {
-  case 0x0000:
-    switch (opcode & 0x00FF) {
-    case 0x00E0:
-      clear_display(chip);
-      break;
-    case 0x00EE:
-      return_from_subroutine(chip);
-      break;
-    default:
-      ERROR_OPCODE;
-      exit(EXIT_FAILURE);
-    }
-    break;
-  case 0x1000:
-    jump_to(chip);
-    break;
-  case 0x2000:
-    call_subroutine(chip);
-    break;
-  case 0x3000:
-    skip_if_Vx_equals_next(chip);
-    break;
-  case 0x4000:
-    skip_if_Vx_not_equals_next(chip);
-    break;
-  case 0x5000:
-    skip_if_Vx_equal_Vy(chip);
-    break;
-  case 0x6000:
-    set_Vx_to(chip);
-    break;
-  case 0x7000:
-    add_to_Vx(chip);
-    break;
-  case 0x8000:
-    switch (opcode & 0x000F) {
-    case 0x0000:
-      set_Vx_to_Vy(chip);
-      break;
-    case 0x0001:
-      set_Vx_to_Vy_OR(chip);
-      break;
-    case 0x0002:
-      set_Vx_to_Vy_AND(chip);
-      break;
-    case 0x0003:
-      set_Vx_to_Vy_XOR(chip);
-      break;
-    case 0x0004:
-      add_Vy_to_Vx(chip);
-      break;
-    case 0x0005:
-      substract_Vy_to_Vx(chip);
-      break;
-    case 0x0006:
-      perform_right_shift(chip);
-      break;
-    case 0x0007:
-      substract_Vx_from_Vy(chip);
-      break;
-    case 0x000E:
-      perform_left_shift(chip);
-      break;
-    default:
-      ERROR_OPCODE;
-      exit(EXIT_FAILURE);
-    }
-  case 0x9000:
-    skip_if_not_equal(chip);
-    break;
-  case 0xA000:
-    set_I_to(chip);
-    break;
-  case 0xB000:
-    jump_to_with_offset(chip);
-    break;
-  case 0xC000:
-    set_Vx_random(chip);
-    break;
-  case 0xD000:
-    display_sprite(chip);
-    break;
-  case 0xE000:
-    switch (opcode & 0x00FF) {
-    case 0x009E:
-      skip_if_pressed(chip);
-      break;
-    case 0x00A1:
-      skip_if_not_pressed(chip);
-      break;
-    default:
-      ERROR_OPCODE;
-      exit(EXIT_FAILURE);
-    }
-  case 0xF000:
-    switch (opcode & 0x00FF) {
-    case 0x0007:
-      set_Vx_to_delay(chip);
-      break;
-    case 0x000A:
-      wait_for_keypress(chip);
-      break;
-    case 0x0015:
-      set_delay_to_Vx(chip);
-      break;
-    case 0x0018:
-      set_sound_to_Vx(chip);
-      break;
-    case 0x001E:
-      add_Vx_to_I(chip);
-      break;
-    case 0x0029:
-      set_I_to_sprite(chip);
-      break;
-    case 0x0033:
-      store_BCD_representation(chip);
-      break;
-    case 0x0055:
-      store_registers_in_I(chip);
-      break;
-    case 0x0065:
-      read_registers_from_I(chip);
-      break;
-    default:
-      ERROR_OPCODE;
-      exit(EXIT_FAILURE);
-    }
-  default:
-    ERROR_OPCODE;
-    exit(EXIT_FAILURE);
-  }
+  instruction_table[(opcode & 0xF000) >> 12](chip);
 }
+
+void zero_instruction(Chip8 *chip) {
+  uint8_t index = (chip->current_op & 0x000F) == 0xE ? 1 : 0;
+  zero_table[index](chip);
+}
+
+void arithmetic_instruction(Chip8 *chip) {
+  arithmetic_table[(chip->current_op & 0x000F)](chip);
+}
+
+void skip_instruction(Chip8 *chip) {
+  uint8_t index = (chip->current_op & 0x000F) == 1 ? 0 : 2;
+  skip_table[index](chip);
+}
+
+void register_instruction(Chip8 *chip) {
+  // FIXME: Find a way to map the opcodes correctly (most likely will need to
+  // use null_instruction)
+  register_table[(chip->current_op & 0x00FF)](chip);
+}
+
+void (*instruction_table[16])(Chip8 *) = {zero_instruction,
+                                          jump_to,
+                                          call_subroutine,
+                                          skip_if_Vx_equals_next,
+                                          skip_if_Vx_not_equals_next,
+                                          skip_if_Vx_equal_Vy,
+                                          set_Vx_to,
+                                          add_to_Vx,
+                                          arithmetic_instruction,
+                                          skip_if_not_equal,
+                                          set_I_to,
+                                          jump_to_with_offset,
+                                          set_Vx_random,
+                                          display_sprite,
+                                          skip_instruction,
+                                          register_instruction};
+
+void (*zero_table[2])(Chip8 *) = {clear_display, return_from_subroutine};
+
+void (*arithmetic_table[16])(Chip8 *) = {
+    set_Vx_to_Vy,        set_Vx_to_Vy_OR,      set_Vx_to_Vy_AND,
+    set_Vx_to_Vy_XOR,    add_Vy_to_Vx,         substract_Vy_to_Vx,
+    perform_right_shift, substract_Vx_from_Vy, perform_left_shift};
+
+void (*skip_table[2])(Chip8 *) = {skip_if_pressed, skip_if_not_pressed};
+
+void (*register_table[9])(Chip8 *) = {
+    set_Vx_to_delay,          wait_for_keypress,    set_delay_to_Vx,
+    set_sound_to_Vx,          add_Vx_to_I,          set_I_to_sprite,
+    store_BCD_representation, store_registers_in_I, read_registers_from_I};
 
 void handle_user_input(Chip8 *chip) {}
 
