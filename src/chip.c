@@ -1,6 +1,7 @@
 #include "chip.h"
 
-#define ERROR_OPCODE printf("ERROR: unrecognized opcode 0x%X\n", opcode)
+#define ERROR_OPCODE                                                           \
+  fprintf(stderr, "ERROR: unrecognized opcode 0x%X\n", opcode)
 
 /*
 ** Starts the system by setting all the appropiate variables.
@@ -35,7 +36,7 @@ void init(Chip8 *chip) {
 
   // Keyboard
   for (int i = 0; i < NUM_KEYS; i++)
-    chip->keyboard[i] = 0;
+    chip->keyboard[i] = FALSE;
 
   chip->key_pressed = FALSE;
 
@@ -62,7 +63,7 @@ void load_roam(Chip8 *chip, const char *path) {
 
     buffer = malloc(sizeof(uint8_t) * rom_length);
     if (buffer == NULL) {
-      printf("ERROR: Out of memory\n");
+      fprintf(stderr, "ERROR: Out of memory\n");
       exit(EXIT_FAILURE);
     }
     fread(buffer, sizeof(uint8_t), rom_length, file);
@@ -72,11 +73,11 @@ void load_roam(Chip8 *chip, const char *path) {
         chip->ram[i + PC_START] = buffer[i];
       }
     } else {
-      printf("ERROR: File too large\n");
+      fprintf(stderr, "ERROR: File too large\n");
       exit(EXIT_FAILURE);
     }
   } else {
-    printf("ERROR: file is null\n");
+    fprintf(stderr, "ERROR: file is null\n");
     exit(EXIT_FAILURE);
   }
 
@@ -88,7 +89,7 @@ uint16_t get_opcode(Chip8 *chip) {
   if (chip->pc_register < RAM_CAPACITY)
     return chip->ram[chip->pc_register] << 8 | chip->ram[chip->pc_register + 1];
   else {
-    printf("Error: Out of bounds.\n");
+    fprintf(stderr, "ERROR: Out of bounds.\n");
     exit(EXIT_FAILURE);
   }
 }
