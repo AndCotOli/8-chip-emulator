@@ -48,7 +48,39 @@ void init(Chip8 *chip) {
   chip->draw_flag = FALSE;
 }
 
-void load_roam(Chip8 *chip, const char *path) {}
+void load_roam(Chip8 *chip, const char *path) {
+  FILE *file = fopen(path, "rb");
+
+  uint8_t *buffer;
+  long rom_length;
+  if (file != NULL) {
+    fseek(file, 0, SEEK_END);
+    rom_length = ftell(file);
+    rewind(file);
+
+    buffer = malloc(sizeof(uint8_t) * rom_length);
+    if (buffer == NULL) {
+      printf("ERROR: Out of memory\n");
+      exit(EXIT_FAILURE);
+    }
+    fread(buffer, sizeof(uint8_t), rom_length, file);
+
+    if ((PROGRAM_END_ADDR - PROGRAM_START_ADDR) >= rom_length) {
+      for (int i = 0; i < rom_length; i++) {
+        chip->ram[i + PC_START] = buffer[i];
+      }
+    } else {
+      printf("ERROR: File too large\n");
+      exit(EXIT_FAILURE);
+    }
+  } else {
+    printf("ERROR: file is null\n");
+    exit(EXIT_FAILURE);
+  }
+
+  fclose(file);
+  free(buffer);
+}
 
 uint16_t get_opcode(Chip8 *chip) {
   return chip->ram[chip->pc_register] << 8 | chip->ram[chip->pc_register + 1];
