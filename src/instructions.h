@@ -4,9 +4,14 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include "chip_8_struct.h"
+
+#define NNN (chip->current_op & 0x0FFF)
+#define X ((chip->current_op & 0x0F00) >> 8)
+#define KK (chip->current_op & 0x00FF)
+#define Y ((chip->current_op & 0x00F0) >> 4)
+#define N (chip->current_op & 0x000F)
 
 /*
 ** Chip instructions.

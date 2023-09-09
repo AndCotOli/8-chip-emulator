@@ -1,11 +1,4 @@
 #include "instructions.h"
-#include <stdint.h>
-
-#define NNN (chip->current_op & 0x0FFF)
-#define X ((chip->current_op & 0x0F00) >> 8)
-#define Y ((chip->current_op & 0x00F0) >> 4)
-#define KK (chip->current_op & 0x00FF)
-#define N (chip->current_op & 0x000F)
 
 /*
 ** OP: 00E0

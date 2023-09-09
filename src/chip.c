@@ -1,13 +1,9 @@
 #include "chip.h"
-#include "chip_8_struct.h"
-#include "instructions.h"
-#include <stdint.h>
 
 #define ERROR_OPCODE                                                           \
-  fprintf(stderr, "ERROR: unrecognized opcode 0x%X\n", opcode)
+  fprintf(stderr, "ERROR: unrecognized opcode 0x%X\n", chip->current_op)
 
 void (*instruction_table[16])(Chip8 *);
-void (*zero_table[2])(Chip8 *);
 void (*arithmetic_table[16])(Chip8 *);
 void (*skip_table[2])(Chip8 *);
 void (*register_table[9])(Chip8 *);
@@ -110,8 +106,17 @@ void execute_instruction(Chip8 *chip) {
 }
 
 void zero_instruction(Chip8 *chip) {
-  uint8_t index = (chip->current_op & 0x000F) == 0xE ? 1 : 0;
-  zero_table[index](chip);
+  switch (N) {
+  case 0x0:
+    clear_display(chip);
+    break;
+  case 0xE:
+    return_from_subroutine(chip);
+    break;
+  default:
+    ERROR_OPCODE;
+    exit(EXIT_FAILURE);
+  }
 }
 
 void arithmetic_instruction(Chip8 *chip) {
@@ -119,8 +124,17 @@ void arithmetic_instruction(Chip8 *chip) {
 }
 
 void skip_instruction(Chip8 *chip) {
-  uint8_t index = (chip->current_op & 0x000F) == 1 ? 0 : 2;
-  skip_table[index](chip);
+  switch (N) {
+  case 0xE:
+    skip_if_pressed(chip);
+    break;
+  case 0x1:
+    skip_if_not_pressed(chip);
+    break;
+  default:
+    ERROR_OPCODE;
+    exit(EXIT_FAILURE);
+  }
 }
 
 void register_instruction(Chip8 *chip) {
@@ -146,14 +160,10 @@ void (*instruction_table[16])(Chip8 *) = {zero_instruction,
                                           skip_instruction,
                                           register_instruction};
 
-void (*zero_table[2])(Chip8 *) = {clear_display, return_from_subroutine};
-
 void (*arithmetic_table[16])(Chip8 *) = {
     set_Vx_to_Vy,        set_Vx_to_Vy_OR,      set_Vx_to_Vy_AND,
     set_Vx_to_Vy_XOR,    add_Vy_to_Vx,         substract_Vy_to_Vx,
     perform_right_shift, substract_Vx_from_Vy, perform_left_shift};
-
-void (*skip_table[2])(Chip8 *) = {skip_if_pressed, skip_if_not_pressed};
 
 void (*register_table[9])(Chip8 *) = {
     set_Vx_to_delay,          wait_for_keypress,    set_delay_to_Vx,
